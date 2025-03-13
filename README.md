@@ -1,6 +1,6 @@
 # Interconnecting Flights API
 
-This API, developed in Spring Boot, retrieves direct and interconnecting flights with a maximum of one layover. It utilizes Ryanair's API to fetch available routes within a given date range.
+This API, developed in Spring Boot, retrieves direct and interconnecting flights with a maximum of one stopover. It utilizes Ryanair's API to fetch available routes within a given date range.
 
 ## Table of Contents
 - [Requirements](#requirements)
