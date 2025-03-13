@@ -11,17 +11,13 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class FlightService {
-
     private final RoutesPort routesPort;
     private final SchedulesPort schedulesPort;
-
-    public FlightService(RoutesPort routesPort, SchedulesPort schedulesPort) {
-        this.routesPort = routesPort;
-        this.schedulesPort = schedulesPort;
-    }
 
     public List<FlightResponse> findFlights(
             String departure,
