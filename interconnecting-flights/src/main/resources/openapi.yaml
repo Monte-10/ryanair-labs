@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: "Interconnecting Flights API"
+  description: "API to retrieve direct and interconnected flights with a maximum of one stopover."
+  version: "1.0.0"
+servers:
+  - url: "http://localhost:8080"
+    description: "Local development server"
+paths:
+  /interconnections:
+    get:
+      summary: "Retrieve flights between two airports"
+      description: "Returns direct flights or flights with a single stopover between the specified airports."
+      parameters:
+        - name: departure
+          in: query
+          required: true
+          schema:
+            type: string
+            example: DUB
+          description: "IATA code of the departure airport"
+        - name: arrival
+          in: query
+          required: true
+          schema:
+            type: string
+            example: WRO
+          description: "IATA code of the arrival airport"
+        - name: departureDateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: "2025-03-10T07:00:00Z"
+          description: "Minimum departure date and time in ISO 8601 format (UTC)"
+        - name: arrivalDateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: "2025-03-10T21:00:00Z"
+          description: "Maximum arrival date and time in ISO 8601 format (UTC)"
+      responses:
+        "200":
+          description: "List of available flights"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FlightResponse"
+        "400":
+          description: "Invalid request"
+        "500":
+          description: "Internal server error"
+components:
+  schemas:
+    FlightResponse:
+      type: object
+      properties:
+        stops:
+          type: integer
+          description: "Number of stopovers (0 for direct flights, 1 for connecting flights)"
+        legs:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlightLeg"
+    FlightLeg:
+      type: object
+      properties:
+        departureAirport:
+          type: string
+          description: "IATA code of the departure airport"
+        arrivalAirport:
+          type: string
+          description: "IATA code of the arrival airport"
+        departureDateTime:
+          type: string
+          format: date-time
+          description: "Departure date and time in ISO 8601 format (UTC)"
+        arrivalDateTime:
+          type: string
+          format: date-time
+          description: "Arrival date and time in ISO 8601 format (UTC)"
