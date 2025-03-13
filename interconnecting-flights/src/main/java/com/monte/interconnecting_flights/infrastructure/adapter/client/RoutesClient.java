@@ -1,5 +1,6 @@
 package com.monte.interconnecting_flights.infrastructure.adapter.client;
 
+import com.monte.interconnecting_flights.domain.port.outbound.RoutesPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class RoutesClient {
+public class RoutesClient implements RoutesPort {
 
     private final RestTemplate restTemplate;
     private final String routesUrl;
@@ -21,6 +22,7 @@ public class RoutesClient {
         this.routesUrl = routesUrl; 
     }
 
+    @Override
     public List<Map<String, String>> getRoutes() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
@@ -34,7 +36,7 @@ public class RoutesClient {
                 routesUrl, HttpMethod.GET, entity, Map[].class
             );
 
-            // LOG: Show response in JSON
+            // Log response
             try {
                 ObjectMapper objectMapper = new ObjectMapper();
                 String jsonResponse = objectMapper

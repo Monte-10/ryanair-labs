@@ -173,12 +173,12 @@ This project follows **Hexagonal Architecture (Ports and Adapters)** to create a
    - **Example:** `FlightLeg.java` (flight segment model).  
 
 2. **Application Layer**  
-   - Implements use cases.  
-   - **Example:** `FlightService.java` (orchestrates flight searches).  
+   - Implements use cases and orchestrates business logic.
+   - **Example:** `FlightService.java` (handles flight searches and interacts with ports instead of concrete implementations).
 
 3. **Infrastructure Layer**  
-   - Handles communication with external services.  
-   - **Example:** `RoutesClient.java` (fetches routes from Ryanair API).  
+   - Implements the adapters that connect the application to external APIs.
+   - **Example:** `RoutesClient.java` and `SchedulesClient.java` implement `RoutesPort` and `SchedulesPort`, respectively, ensuring dependency inversion.
 
 4. **API Layer**  
    - Exposes REST endpoints.  
@@ -186,11 +186,27 @@ This project follows **Hexagonal Architecture (Ports and Adapters)** to create a
 
 ### SOLID Principles in Action
 
-- **SRP**: `FlightService.java` only handles flight search logic.  
-- **OCP**: New airline APIs can be integrated without modifying `FlightService.java`.  
-- **LSP**: API clients are interchangeable due to interface-based design.  
-- **ISP**: `RoutesClient.java` and `SchedulesClient.java` focus on separate concerns.  
-- **DIP**: High-level modules depend on abstractions rather than concrete implementations.  
+- **Single Responsibility Principle (SRP)**  
+  Each class has a single responsibility.  
+  Example: `FlightService.java` is solely responsible for flight search logic, while `RoutesClient.java` only fetches routes from Ryanair's API.
+
+- **Open/Closed Principle (OCP)**  
+  The system should be open for extension but closed for modification.  
+  Example: If we want to add another airline's API, we can create a new API client (`NewAirlineClient.java`) without modifying `FlightService.java`.
+
+- **Liskov Substitution Principle (LSP)**  
+  Subtypes should be replaceable by their base types without altering functionality.  
+  Example: `FlightService.java` does not depend on `RoutesClient` directly but on the `RoutesPort` interface, allowing for easy replacement with a mock during testing.
+
+- **Interface Segregation Principle (ISP)**  
+  Clients should not be forced to depend on interfaces they do not use.  
+  Example: Instead of having a single large API client class, we separate concerns into `RoutesClient.java` and `SchedulesClient.java`.
+
+- **Dependency Inversion Principle (DIP)**  
+  High-level modules should not depend on low-level implementations, but on abstractions.  
+  Example: `FlightService.java` interacts with `RoutesPort` and `SchedulesPort`, rather than `RoutesClient` and `SchedulesClient`.
+  This makes the service independent of specific implementations, improving testability and maintainability.
+
 
 ### Why OpenAPI?
 

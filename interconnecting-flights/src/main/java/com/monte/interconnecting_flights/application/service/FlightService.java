@@ -2,9 +2,8 @@ package com.monte.interconnecting_flights.application.service;
 
 import com.monte.interconnecting_flights.domain.model.FlightLeg;
 import com.monte.interconnecting_flights.domain.model.FlightResponse;
-import com.monte.interconnecting_flights.infrastructure.adapter.client.ExternalApiException;
-import com.monte.interconnecting_flights.infrastructure.adapter.client.RoutesClient;
-import com.monte.interconnecting_flights.infrastructure.adapter.client.SchedulesClient;
+import com.monte.interconnecting_flights.domain.port.outbound.RoutesPort;
+import com.monte.interconnecting_flights.domain.port.outbound.SchedulesPort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,12 +15,12 @@ import java.util.stream.Collectors;
 @Service
 public class FlightService {
 
-    private final RoutesClient routesClient;
-    private final SchedulesClient schedulesClient;
+    private final RoutesPort routesPort;
+    private final SchedulesPort schedulesPort;
 
-    public FlightService(RoutesClient routesClient, SchedulesClient schedulesClient) {
-        this.routesClient = routesClient;
-        this.schedulesClient = schedulesClient;
+    public FlightService(RoutesPort routesPort, SchedulesPort schedulesPort) {
+        this.routesPort = routesPort;
+        this.schedulesPort = schedulesPort;
     }
 
     public List<FlightResponse> findFlights(
@@ -30,7 +29,7 @@ public class FlightService {
             LocalDateTime departureDateTime,
             LocalDateTime arrivalDateTime
     ) {
-        // Validating
+        // Validation
         if (departure == null || departure.isBlank()) {
             throw new IllegalArgumentException("The 'departure' parameter cannot be null or empty");
         }
@@ -47,21 +46,21 @@ public class FlightService {
             throw new IllegalArgumentException("departure and arrival cannot be the same");
         }
 
-        // Calling Routes API
+        // Calling the Routes API via the abstraction
         List<Map<String, String>> routes;
         try {
-            routes = routesClient.getRoutes();
-        } catch (ExternalApiException ex) {
+            routes = routesPort.getRoutes();
+        } catch (Exception ex) {
             throw ex;
         }
 
-        // Filtering no connected routes
+        // Filter routes that have no connecting airport
         List<Map<String, String>> filteredRoutes = routes.stream()
             .filter(route -> "RYANAIR".equals(route.get("operator")) &&
                              route.get("connectingAirport") == null)
             .collect(Collectors.toList());
 
-        // Fly search
+        // Flight search
         Set<FlightResponse> allFlights = new HashSet<>();
 
         // Direct flights
@@ -77,7 +76,7 @@ public class FlightService {
             allFlights.addAll(directFlights);
         }
 
-        // Flight with stopover
+        // Flights with a stopover
         List<Map<String, String>> firstLegRoutes = filteredRoutes.stream()
             .filter(route ->
                 departure.equals(route.get("airportFrom")) &&
@@ -101,7 +100,7 @@ public class FlightService {
                 );
 
                 if (!connecting.isEmpty()) {
-                    System.out.println("🔄 Stopover route detected: " +
+                    System.out.println("Stopover route detected: " +
                             departure + " -> " + stopover + " -> " + arrival);
                     allFlights.addAll(connecting);
                 }
@@ -117,21 +116,21 @@ public class FlightService {
             LocalDateTime departureDateTime,
             LocalDateTime arrivalDateTime
     ) {
-        // Call the API
+        // Call the Schedules API via the abstraction
         Map<String, Object> schedule;
         try {
-            schedule = schedulesClient.getSchedule(
+            schedule = schedulesPort.getSchedule(
                 departure, arrival,
                 departureDateTime.getYear(),
                 departureDateTime.getMonthValue()
             );
-        } catch (ExternalApiException ex) {
+        } catch (Exception ex) {
             throw ex;
         }
 
         List<FlightResponse> flights = new ArrayList<>();
 
-        // If no days -> Return empty
+        // If there are no "days" in the schedule, return an empty list
         if (!schedule.containsKey("days")) {
             return flights;
         }
@@ -163,7 +162,7 @@ public class FlightService {
                                 depTime.getMinute()
                         );
 
-                        // If arrivalTime < departureTime => crosses midnight
+                        // If arrivalTime is before departureTime, it means the flight crosses midnight
                         int arrivalDayNumber = dayNumber;
                         if (arrTime.isBefore(depTime)) {
                             arrivalDayNumber++;
@@ -205,11 +204,11 @@ public class FlightService {
             LocalDateTime departureDateTime,
             LocalDateTime arrivalDateTime
     ) {
-        // First Leg
+        // First leg
         List<FlightResponse> firstLegFlights = findDirectFlights(
                 departure, stopover, departureDateTime, arrivalDateTime
         );
-        // Second Leg
+        // Second leg
         List<FlightResponse> secondLegFlights = findDirectFlights(
                 stopover, arrival, departureDateTime, arrivalDateTime
         );
@@ -222,13 +221,9 @@ public class FlightService {
             for (FlightResponse secondLeg : secondLegFlights) {
                 FlightLeg leg2 = secondLeg.getLegs().get(0);
 
-                // Minimum of 2 hours between arrival of first leg and departure of second leg
-                if (leg1.getArrivalDateTime().plusHours(2)
-                        .isBefore(leg2.getDepartureDateTime())) {
-
-                    FlightResponse connecting = new FlightResponse(
-                            1, List.of(leg1, leg2)
-                    );
+                // Minimum of 2 hours between the arrival of the first leg and the departure of the second leg
+                if (leg1.getArrivalDateTime().plusHours(2).isBefore(leg2.getDepartureDateTime())) {
+                    FlightResponse connecting = new FlightResponse(1, List.of(leg1, leg2));
                     connectedFlights.add(connecting);
                 }
             }
